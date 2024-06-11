@@ -44,6 +44,9 @@ bot.hears("ping", async (ctx) => {
 bot.hears([/жопа/, /fuck/], async (ctx) => {
   await ctx.reply("Ругаться очень не красиво!");
 });
+bot.hears([/Здравствуйте/, /Привет/, /Здарово/, /Хай/], async (ctx) => {
+  await ctx.reply("Здравствуйте, чем могу помочь?");
+});
 
 //Обработчик ошибок (нужны GrammyError, HttpError)
 
@@ -74,7 +77,7 @@ bot.on(["message:entities:url", "::email"], async (ctx) => {
 bot.on("message:text", async (ctx) => {
   //можно сократить до (:text)
   let a = ctx.from.first_name;
-  await ctx.reply("Thinking...");
+  await ctx.reply("Читаю");
 });
 
 //комбинация фильтров
