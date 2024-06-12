@@ -7,11 +7,14 @@
 
 import dotenv from "dotenv";
 import axios from "axios";
-import { Bot, Keyboard, GrammyError, HttpError } from "grammy";
+import { Bot, Keyboard, GrammyError, HttpError, InlineKeyboard } from "grammy";
+//плагин для работы с инлайн клавиатурой
+import { hydrate } from "@grammyjs/hydrate";
 
 dotenv.config();
 
 const bot = new Bot(process.env.BOT_API_KEY);
+bot.use(hydrate());
 
 //Меню команд, массив объектов содержащий команды и их описание
 
@@ -20,14 +23,14 @@ bot.api.setMyCommands([
     command: "start",
     description: "Запуск бота",
   },
+  {
+    command: "menu",
+    description: "Меню бота",
+  },
   /* {
     command: "hello",
     description: "Получить приветсвие",
   }, */
-  {
-    command: "id",
-    description: "Получить свой telegram id",
-  },
   /*  {
     command: "mood",
 
@@ -37,6 +40,10 @@ bot.api.setMyCommands([
     command: "share",
     description: "Отправить местоположение",
   }, */
+  /* {
+    command: "inline",
+    description: "test",
+  }, */
   {
     command: "weather",
     description: "Какая погода за окном",
@@ -44,6 +51,10 @@ bot.api.setMyCommands([
   {
     command: "covid",
     description: "Ковид статистика",
+  },
+  {
+    command: "link",
+    description: "Ссылка в виде инлайн клавиатуры",
   },
 ]);
 
@@ -66,10 +77,6 @@ bot.command("start", async (ctx) => {
 //массив команд работает как оператор или, обрабатываем сразу несколько команд
 bot.command(["hello", "hi"], async (ctx) => {
   await ctx.reply(`Hello, ${ctx.from.first_name}:)`);
-});
-
-bot.command("id", async (ctx) => {
-  await ctx.reply(`Твой ID в Telegram: ${ctx.from.id}`);
 });
 
 //Создание клавиатуры с помощью класса Keyboard
@@ -106,7 +113,7 @@ bot.command("share", async (ctx) => {
 });
 
 bot.command("weather", async (ctx) => {
-  const reqKey = new Keyboard().requestLocation("Тык📍").resized();
+  const reqKey = new Keyboard().requestLocation("Тык📍").resized().oneTime();
   await ctx.reply("Где ты?", {
     reply_markup: reqKey,
   });
@@ -121,6 +128,76 @@ bot.command("covid", async (ctx) => {
       parse_mode: "HTML",
     }
   );
+});
+
+//Работа с inline клавиатурой
+bot.command("inline", async (ctx) => {
+  const inlineKeyboard = new InlineKeyboard()
+    .text("1", "button1")
+    .text("2", "button2")
+    .text("3", "button3");
+  await ctx.reply("Answer", {
+    reply_markup: inlineKeyboard,
+  });
+});
+
+//обработка нажатий на клавиатуру происходит спомощью метода callbackQuery
+
+bot.callbackQuery(["button1", "button2", "button3"], async (ctx) => {
+  //ответ на callbackQuery
+  await ctx.answerCallbackQuery();
+  await ctx.reply(`Ты нажал ${ctx.callbackQuery.data} на клавиатуре`);
+});
+
+//При помощи метода on, его лучше использовать при большом количестве кнопок
+/* bot.on("callback_query:data", async (ctx) => {
+  await ctx.reply(`Ты нажал ${ctx.callbackQuery.data} на клавиатуре`);
+});
+ */
+
+bot.command("link", async (ctx) => {
+  const inLink = new InlineKeyboard().url(
+    "Перейтина сайт",
+    "https://www.youtube.com/"
+  );
+  await ctx.reply("Информация", {
+    reply_markup: inLink,
+  });
+});
+
+//создаём 2 инлайн клавиатуры
+const menuKeyboard = new InlineKeyboard()
+  .text("Telegram ID", "userID")
+  .text("Помощь", "help");
+const backKeyboard = new InlineKeyboard().text("< Назад", "back");
+//Вызов меню
+bot.command("menu", async (ctx) => {
+  await ctx.reply("Меню", {
+    reply_markup: menuKeyboard,
+  });
+});
+
+//Обработка нажаития с помощью hydrate плагина
+bot.callbackQuery("userID", async (ctx) => {
+  await ctx.callbackQuery.message.editText(`Твой ID: ${ctx.from.id}`, {
+    reply_markup: backKeyboard,
+  });
+  await ctx.answerCallbackQuery();
+});
+bot.callbackQuery("help", async (ctx) => {
+  await ctx.callbackQuery.message.editText(
+    `Здесь должна быть помощь, но мне лень что-то писать :)`,
+    {
+      reply_markup: backKeyboard,
+    }
+  );
+  await ctx.answerCallbackQuery();
+});
+bot.callbackQuery("back", async (ctx) => {
+  await ctx.callbackQuery.message.editText(`Меню`, {
+    reply_markup: menuKeyboard,
+  });
+  await ctx.answerCallbackQuery();
 });
 
 //Ответ на определённые сообщения
@@ -180,6 +257,7 @@ bot.on(":contact", async (ctx) => {
   console.log(ctx.msg.contact.phone_number);
 });
 
+//ответ с сообщением отекущей погоде на отправленную  геолокацию
 bot.on(":location", async (ctx) => {
   console.log(ctx.msg.location);
   const loc = [ctx.msg.location.latitude, ctx.msg.location.longitude];
