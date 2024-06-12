@@ -6,7 +6,8 @@
 //pvlTest1bot
 
 import dotenv from "dotenv";
-import { Bot, GrammyError, HttpError } from "grammy";
+import axios from "axios";
+import { Bot, Keyboard, GrammyError, HttpError } from "grammy";
 
 dotenv.config();
 
@@ -19,33 +20,47 @@ bot.api.setMyCommands([
     command: "start",
     description: "Запуск бота",
   },
-  {
+  /* {
     command: "hello",
     description: "Получить приветсвие",
-  },
+  }, */
   {
     command: "id",
     description: "Получить свой telegram id",
+  },
+  /*  {
+    command: "mood",
+
+    description: "Оценка настроения",
+  }, */
+  /*  {
+    command: "share",
+    description: "Отправить местоположение",
+  }, */
+  {
+    command: "weather",
+    description: "Какая погода за окном",
+  },
+  {
+    command: "covid",
+    description: "Ковид статистика",
   },
 ]);
 
 //adding event listener (ctx - context)
 //Обработка команд
 bot.command("start", async (ctx) => {
-  await ctx.reply(
-    "Hello, i am your <a href='https://www.youtube.com/watch?v=q-AFR0D7Vuw&ab_channel=PomazkovJS'>bot</a> 🫡",
-    {
-      /*
+  await ctx.reply("Hello, i am your bot🫡", {
+    /*
     Второй аргумент функции - объект в котором можно указать доп параметры
     В данном случае, бот отвечает на определённое сообщение пользователя
     по id сообщения*/
-      reply_parameters: { message_id: ctx.msg.message_id },
-      //Форматирование сообщений в виде кода HTML
-      parse_mode: "HTML",
-      //Чтобы отключить превью ссылки используется параметр
-      //disable_web_page_preview: true,
-    }
-  );
+    reply_parameters: { message_id: ctx.msg.message_id },
+    //Форматирование сообщений в виде кода HTML
+    parse_mode: "HTML",
+    //Чтобы отключить превью ссылки используется параметр
+    //disable_web_page_preview: true,
+  });
 });
 
 //массив команд работает как оператор или, обрабатываем сразу несколько команд
@@ -57,9 +72,64 @@ bot.command("id", async (ctx) => {
   await ctx.reply(`Твой ID в Telegram: ${ctx.from.id}`);
 });
 
+//Создание клавиатуры с помощью класса Keyboard
+bot.command("mood", async (ctx) => {
+  const moodKey = new Keyboard().text("Хорошо").text("Нормально").text("Плохо");
+  //После row() начинается новая строка, метод resized() подгоняет размер кнопок
+  //oneTime() - клавиатура исчезнет после отправки сообщения
+  const moodKey2 = new Keyboard()
+    .text("Хорошо")
+    .row()
+    .text("Нормально")
+    .row()
+    .text("Плохо")
+    .resized()
+    .oneTime();
+  await ctx.reply("Как настроение", {
+    //Отправляем клавиатуру вместе с сообщением
+    reply_markup: moodKey2,
+  });
+});
+
+bot.command("share", async (ctx) => {
+  const shareKey = new Keyboard()
+    .requestLocation("Геолокация")
+    .requestContact("Контакт")
+    .requestPoll("Опрос")
+    .placeholder("Укажи данные")
+    .oneTime()
+    .resized();
+
+  await ctx.reply("Чем поделишься?", {
+    reply_markup: shareKey,
+  });
+});
+
+bot.command("weather", async (ctx) => {
+  const reqKey = new Keyboard().requestLocation("Тык📍").resized();
+  await ctx.reply("Где ты?", {
+    reply_markup: reqKey,
+  });
+});
+
+bot.command("covid", async (ctx) => {
+  const result = await axios.get("https://disease.sh/v3/covid-19/all");
+  //console.log(result.data);
+  await ctx.reply(
+    `Всего случаев: ${result.data.cases}\nВыздоровело: ${result.data.recovered}\nСмертей: ${result.data.deaths}`,
+    {
+      parse_mode: "HTML",
+    }
+  );
+});
+
 //Ответ на определённые сообщения
-bot.hears("ping", async (ctx) => {
-  await ctx.reply("pong");
+bot.hears("Хорошо", async (ctx) => {
+  await ctx.reply("Отлично!");
+});
+
+bot.hears("Нормально", async (ctx) => {
+  await ctx.reply("Отлично!");
 });
 
 //мы можем использовать регулярные выражения для ответа на сообщение  котором используются определённые слова
@@ -104,6 +174,27 @@ bot.catch((err) => {
 bot.on(["message:entities:url", "::email"], async (ctx) => {
   await ctx.reply("Получил ссылку");
 });
+
+bot.on(":contact", async (ctx) => {
+  await ctx.reply("Спасибо за контакт");
+  console.log(ctx.msg.contact.phone_number);
+});
+
+bot.on(":location", async (ctx) => {
+  console.log(ctx.msg.location);
+  const loc = [ctx.msg.location.latitude, ctx.msg.location.longitude];
+  console.log(loc);
+  const weather = await axios.get(
+    `https://api.weatherbit.io/v2.0/current?lat=${loc[0]}&lon=${loc[1]}&key=${process.env.WEATHER_BIT_API_KEY}`
+  );
+  console.log(weather.data.data[0].app_temp);
+  let temp = weather.data.data[0].app_temp;
+  await ctx.reply(`Сейчас на улице ${weather.data.data[0].app_temp} ℃`, {
+    //После отправки сообщения клавиатура исчезает
+    reply_markup: { remove_keyboard: true },
+  });
+});
+
 bot.on("message:text", async (ctx) => {
   //можно сократить до (:text)
   let a = ctx.from.first_name;
