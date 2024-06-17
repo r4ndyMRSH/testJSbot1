@@ -27,6 +27,10 @@ bot.api.setMyCommands([
     command: "menu",
     description: "Меню бота",
   },
+  {
+    command: "game",
+    description: "Запуск игры",
+  },
   /* {
     command: "hello",
     description: "Получить приветсвие",
@@ -72,6 +76,11 @@ bot.command("start", async (ctx) => {
     //Чтобы отключить превью ссылки используется параметр
     //disable_web_page_preview: true,
   });
+});
+
+//Запуск игры
+bot.command("game", async (ctx) => {
+  await ctx.replyWithGame("hl3_game");
 });
 
 //массив команд работает как оператор или, обрабатываем сразу несколько команд
@@ -291,6 +300,11 @@ bot.on("message:photo", async (ctx) => {
 bot.on("message:voice", async (ctx) => {
   await ctx.reply("Nice voice:)");
 });
+
+bot.on("callback_query:game_short_name", async (ctx) => {
+  await ctx.answerCallbackQuery({ url:"http://45-91-169-244.cloud-xip.com:4000/"});
+});
+
 
 //starting bot
 bot.start();
