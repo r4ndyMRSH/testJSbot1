@@ -302,7 +302,7 @@ bot.on("message:voice", async (ctx) => {
 });
 
 bot.on("callback_query:game_short_name", async (ctx) => {
-  await ctx.answerCallbackQuery({ url:"http://45-91-169-244.cloud-xip.com:4000/"});
+  await ctx.answerCallbackQuery({ url:"https://t-rex-f6jx.onrender.com/"});
 });
 
 
